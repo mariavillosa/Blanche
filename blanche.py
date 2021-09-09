@@ -7,10 +7,17 @@ import subprocess
 class BlanchControl:
     def __init__(self):
         self.whitelist_path = f'{Path.home()}/.whitelist'
-        self.enabled = 'none' not in subprocess.check_output('gsettings get org.gnome.system.proxy mode'.split()).decode('ascii')
+        proxy_check_cmd = 'gsettings get org.gnome.system.proxy mode'
+        self.enabled = 'none' not in subprocess.check_output(proxy_check_cmd.split()).decode('ascii')
 
     def _formatted_domains(self):
-        return [f'*.{i}' for i in self.read_config().split('\n') if i != '']
+        domains = []
+        for domain in self.read_config().split('\n'):
+            if domain:
+                domains.append(f'{domain}')
+                # We also whitelist all subdomains of whitelisted domains
+                domains.append(f'*.{i}') 
+        return domains
 
     def enable_proxy(self):
         self.enabled = True
@@ -64,9 +71,11 @@ class BlancheGui:
                 toggle_btn.config(relief='sunken')
                 btn_text.set('Disable whitelist')
 
-        toggle_btn = Button(self.window, textvariable=btn_text, width=12, relief="sunken" if self.controller.enabled else "raised")
+        relief = "sunken" if self.controller.enabled else "raised"
+        toggle_btn = Button(self.window, textvariable=btn_text, width=12, relief=relief)
         toggle_btn.config(command=lambda: toggle(toggle_btn))
-        btn_text.set(f"{'Disable' if self.controller.enabled else 'Enforce'} whitelist")
+        enable_or_disable = 'Disable' if self.controller.enabled else 'Enforce'
+        btn_text.set(f"{enable_or_disable} whitelist")
         toggle_btn.pack(pady=5)
 
     def add_whitelist_text(self):
@@ -85,8 +94,9 @@ class BlancheGui:
             self.controller.save_config(self.text.get('1.0', 'end-1c'))
             save_text.set('Saving...')
             save_button.config(relief='sunken')
-            self.window.after(500, lambda: (save_text.set('Save') or True) and save_button.config(relief='raised'))
-
+            def reset_save_button():
+                save_text.set('Save'), save_button.config(relief='raised')
+            self.window.after(500, reset_save_button)
         save_button.config(command=save_config)
         save_button.pack(pady=5)
 
