@@ -16,7 +16,7 @@ class BlanchControl:
             if domain:
                 domains.append(f'{domain}')
                 # We also whitelist all subdomains of whitelisted domains
-                domains.append(f'*.{i}') 
+                domains.append(f'*.{domain}') 
         return domains
 
     def enable_proxy(self):
